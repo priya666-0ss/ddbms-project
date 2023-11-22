@@ -29,22 +29,22 @@
 
             <div class="columns">
                 <div class="column section">
-                    <div class="subtitle is-5">Bus Bookings</div>
+                    <div class="subtitle is-5">Train Bookings</div>
 
-                    {% if bus_bookings|length == 0 %}
+                    {% if train_bookings|length == 0 %}
                     <div class="section notification is-light">
                         NO BOOKINGS TO SHOW
                     </div>
                     {% endif %}
 
-                    {% for booking in bus_bookings %}
+                    {% for booking in train_bookings %}
                     <form class="box">
                         <div class="field is-horizontal">
 
                             <div class="field-body">
                                 <div class="field">
                                     <div class="subtitle is-5">
-                                        <a href="{% url 'buses:Details' id=booking.service_id %}">{{ booking.service_name }}</a>
+                                        <a href="{% url 'trains:Details' id=booking.service_id %}">{{ booking.service_name }}</a>
                                     </div>
                                 </div>
                                 <div class="field">

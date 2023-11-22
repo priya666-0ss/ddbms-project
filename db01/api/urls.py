@@ -39,5 +39,19 @@ urlpatterns = [
     path('bookings/bus/delete', views.DeleteBusBooking.as_view()),
     path('bookings/bus/user/<str:email>', views.GetBusBookingByUser.as_view()),
     path('bookings/bus/date', views.BusBookingsByDate.as_view()),
+    
+    path('train/list', views.TrainServiceList.as_view()),
+    path('train/insert', views.NewTrainService.as_view()),
+    path('train/delete', views.DeleteTrainService.as_view()),
+    path('train/list/email', views.TrainServiceListEmail.as_view()),
+    path('train/update', views.UpdateTrainService.as_view()),
+    path('train/get', views.GetTrainService.as_view()),
+    path('train/list/city', views.GetTrainByCity.as_view()),
+    path('bookings/train/get', views.TrainBookingByTrain.as_view()),
+    path('bookings/train/new', views.NewTrainBooking.as_view()),
+    path('bookings/train/id/<slug:id>', views.GetTrainBookingById.as_view()),
+    path('bookings/train/delete', views.DeleteTrainBooking.as_view()),
+    path('bookings/train/user/<str:email>', views.GetTrainBookingByUser.as_view()),
+    path('bookings/train/date', views.TrainBookingsByDate.as_view()),
 
 ]

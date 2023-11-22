@@ -24,6 +24,12 @@ DELETE_HOTEL_SERVICE = '/api/hotels/delete'
 GET_HOTEL_SERVICE = '/api/hotels/list/email'
 GET_HOTEL_SERVICE_BY_CITY = '/api/hotels/list/city'
 
+INSERT_TRAIN_SERVICE = '/api/train/insert'
+DELETE_TRAIN_SERVICE = '/api/train/delete'
+GET_TRAIN_SERVICE = '/api/train/list/email'
+UPDATE_TRAIN_SERVICE = '/api/train/update'
+GET_TRAIN_SERVICE_ID = '/api/train/get'
+
 HOTEL_BOOKING = '/api/bookings/hotel/new'
 GET_HOTEL_BOOKING_BY_HOTEL = '/api/bookings/hotel/get'
 GET_HOTEL_BOOKING_BY_USER = '/api/bookings/hotel/user'
@@ -38,6 +44,14 @@ GET_BUS_BOOKING_BY_ID = '/api/bookings/bus/id'
 DELETE_BUS_BOOKING = '/api/bookings/bus/delete'
 GET_BUS_BOOKING_BY_USER = '/api/bookings/bus/user'
 GET_BUS_BOOKING_BY_DATE = '/api/bookings/bus/date'
+
+TRAIN_BOOKING = '/api/bookings/train/new'
+GET_TRAIN_SERVICE_BY_CITY = '/api/train/list/city'
+GET_TRAIN_BOOKING_BY_BUS = '/api/bookings/train/get'
+GET_TRAIN_BOOKING_BY_ID = '/api/bookings/train/id'
+DELETE_TRAIN_BOOKING = '/api/bookings/train/delete'
+GET_TRAIN_BOOKING_BY_USER = '/api/bookings/train/user'
+GET_TRAIN_BOOKING_BY_DATE = '/api/bookings/train/date'
 
 ########################### REPLICATION HELPERS ########################
 
@@ -520,20 +534,25 @@ def get_services_by_email_rep(email):
     metaData = models.ServiceMetaData.objects.filter(provider__contains = [email])
     bus_services = []
     hotel_services = []
+    train_services = []
     for service in metaData:
         S = get_service_by_id_rep(service.id)
         if service.id[0] == 'B':
             bus_services.append(S)
-        else:
+        elif service.id[0] == 'H':
             hotel_services.append(S)
+        elif service.id == 'T':
+            train_services.append(S)
 
-    return bus_services, hotel_services
+    return bus_services, hotel_services, train_services
 
 def get_service_by_id_rep(id):
     if id[0] == 'H':
         return get_hotel_service_by_id_rep(id)
     if id[0] == 'B':
         return get_bus_service_by_id_rep(id)
+    if id[0] == 'T':
+        return get_train_service_by_id_rep(id)
 
 def get_hotel_service_by_id_rep(id):
     metaData = models.ServiceMetaData.objects.get(id = id)
@@ -1015,6 +1034,325 @@ def get_bus_booking_by_user(email):
     return A
 
 def get_bus_booking_by_date(id, date):
+
+    dbs = models.DatabaseDetails.objects.exclude(name = 'primary')
+    DATA = {'id': id, 'date': date}
+    D = {}
+    bookings = []
+    for db in dbs:
+
+        try:
+
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + GET_BUS_BOOKING_BY_DATE
+            r = requests.post(db_addr, data = DATA)
+            B = json.loads(r.text)
+            for booking in B:
+                b_id = booking.get('id')
+                if b_id not in D:
+                    D[b_id] = 1
+                    bookings.append(booking)
+
+        except Exception as e:
+            continue
+
+    return bookings
+
+def insert_train_service_rep(id, name, provider):
+    dbs = models.DatabaseDetails.objects.exclude(name = 'primary').filter(status = '1').order_by('size')
+    counter = 0
+    db_names = ['' for i in range(replication_factor)]
+    for db in dbs:
+        db_addr = 'http://' + db.ip_addr + ':' + db.port + INSERT_BUS_SERVICE
+        DATA = {'id': id, 'name': name, 'provider': provider}
+        r = requests.post(db_addr, data = DATA)
+        if r.status_code == 201:
+            db.size += 17
+            db.save()
+            counter += 1
+            db_names[counter - 1] = db.name
+            if counter == replication_factor:
+                break
+
+    new_train = models.ServiceMetaData(id = id, name = name, type = 'T', db_name_0 = db_names[0], db_name_1 = db_names[1], db_name_2 = db_names[2], provider = list([provider]))
+    new_train.db_name = db_names[0]              # COMMENT LATER
+    new_train.save()
+
+    if counter == replication_factor:
+        return 201
+    else:
+        return 404
+    
+def get_train_service_by_id_rep(id):
+    metaData = models.ServiceMetaData.objects.get(id = id)
+    check_primary(metaData)
+    for i in range(3):
+        try:
+            db_name = 'db_name_' + str(i)
+            db = models.DatabaseDetails.objects.get(name = getattr(metaData, db_name))
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + GET_BUS_SERVICE_ID
+            DATA = {'id': id}
+            r = requests.get(db_addr, data = DATA)
+            return json.loads(r.text)[0]
+        except:
+            continue
+
+def update_train_service_rep(id, name = None, price = None, train_number = None, is_ready = None, seats = None, provider = None, route = None, timing = None, boarding_point = None, provider_code = None, route_code = None, timing_code = None, boarding_code = None):
+
+    try:
+
+        metaData = models.ServiceMetaData.objects.get(id = id)
+
+        check_primary(metaData)
+
+        primary = models.DatabaseDetails.objects.get(name = metaData.db_name_0)
+        sec1 = models.DatabaseDetails.objects.get(name = metaData.db_name_1)
+        sec2 = models.DatabaseDetails.objects.get(name = metaData.db_name_2)
+
+        db_addr_0 = 'http://' + primary.ip_addr + ':' + primary.port + UPDATE_BUS_SERVICE
+        db_addr_1 = 'http://' + sec1.ip_addr + ':' + sec1.port + UPDATE_BUS_SERVICE
+        db_addr_2 = 'http://' + sec2.ip_addr + ':' + sec2.port + UPDATE_BUS_SERVICE
+
+        db_names = {'db_addr_1': sec1.name, 'db_addr_2': sec2.name}
+
+        DATA = {'id': id}
+        if name != None:
+            DATA.update({'name': name})
+        if price != None:
+            DATA.update({'price': int(price)})
+        if train_number != None:
+            DATA.update({'train_number': train_number})
+        if is_ready != None:
+            DATA.update({'is_ready': is_ready})
+        if seats != None:
+            DATA.update({'seats': seats})
+        if provider != None:
+            DATA.update({'provider': provider})
+        if boarding_point != None:
+            if boarding_code != 'REMOVE':
+                DATA.update({'boarding_point': boarding_point.upper()})
+            else:
+                DATA.update({'boarding_point': boarding_point})
+        if route != None:
+            if route_code != 'REMOVE':
+                DATA.update({'route': route.upper()})
+            else:
+                DATA.update({'route': route})
+        if timing != None:
+            DATA.update({'timing': timing})
+        if provider_code != None:
+            DATA.update({'provider_code': provider_code})
+        if route_code != None:
+            DATA.update({'route_code': route_code})
+        if timing_code != None:
+            DATA.update({'timing_code': timing_code})
+        if boarding_code != None:
+            DATA.update({'boarding_code': boarding_code})
+
+        DATA.update({'db_addr_1': db_addr_1, 'db_addr_2': db_addr_2})
+
+        r = requests.post(db_addr_0, data = DATA)
+
+        UP = json.loads(r.text)
+        handle_update_status(DATA, UP, 'POST', db_names)
+        return r.status_code
+
+    except Exception as e:
+        print(e)
+        return 400
+
+###############################################################################
+
+######################## REP VERSION ##############################
+
+def delete_train_service_rep(id):
+
+    try:
+
+        metaData = models.ServiceMetaData.objects.get(id = id)
+        check_primary(metaData)
+
+        primary = models.DatabaseDetails.objects.get(name = metaData.db_name_0)
+        sec1 = models.DatabaseDetails.objects.get(name = metaData.db_name_1)
+        sec2 = models.DatabaseDetails.objects.get(name = metaData.db_name_2)
+
+        db_addr_0 = 'http://' + primary.ip_addr + ':' + primary.port + DELETE_BUS_SERVICE
+        db_addr_1 = 'http://' + sec1.ip_addr + ':' + sec1.port + DELETE_BUS_SERVICE
+        db_addr_2 = 'http://' + sec2.ip_addr + ':' + sec2.port + DELETE_BUS_SERVICE
+
+        db_names = {'db_addr_1': sec1.name, 'db_addr_2': sec2.name}
+
+        DATA = {'id': id}
+        DATA.update({'db_addr_1': db_addr_1, 'db_addr_2': db_addr_2})
+
+        r = requests.post(db_addr_0, data = DATA)
+
+        if r.status_code == 200:
+
+            primary.size -= 18
+            sec1.size -= 18
+            sec2.size -= 18
+            primary.save()
+            sec1.save()
+            sec2.save()
+            metaData.delete()
+            UP = json.loads(r.text)
+            handle_update_status(DATA, UP, 'POST', db_names)
+
+        return r.status_code
+
+    except Exception as e:
+        print(e)
+        return 400
+    
+def get_train_services_city(From, To):
+    dbs = models.DatabaseDetails.objects.exclude(name = 'primary')
+    D = {}
+    A = []
+    for db in dbs:
+        try:
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + GET_BUS_SERVICE_BY_CITY
+            DATA = {'From': From.upper(), 'To': To.upper() }
+            r = requests.post(db_addr, data = DATA)
+            S = json.loads(r.text)
+            for dic in S:
+                if dic.get('id') not in D:
+                    D[dic.get('id')] = 1
+                    A.append(dic)
+        except Exception as e:
+            print(e)
+            continue
+
+    return A
+
+def get_train_bookings_by_train(service_id, From, To, TravelDate):
+    dbs = models.DatabaseDetails.objects.exclude(name = 'primary')
+    D = {}
+    counter = 0
+    for db in dbs:
+        try:
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + GET_BUS_BOOKING_BY_BUS
+            print(db_addr)
+            DATA = {'service_id': service_id, 'TravelDate' : TravelDate}
+            r = requests.post(db_addr, data = DATA)
+            S = json.loads(r.text)
+            for dic in S:
+                if dic.get('id') not in D:
+                    D[dic.get('id')] = 1
+                    counter += dic.get('seats')
+        except Exception as e:
+            print(e)
+            continue
+
+    return counter
+
+def new_train_booking(id, service_id, email, From, To, TravelDate, booking_date, seats, bill):
+
+    dbs = models.DatabaseDetails.objects.exclude(name = 'primary').filter(status = '1').order_by('size')
+    counter = 0
+    DATA = {'id': id, 'service_id': service_id, 'email': email, 'From': From, 'To': To, 'TravelDate': TravelDate, 'booking_date': booking_date, 'seats': seats, 'bill': bill}
+    db_names = []
+    for db in dbs:
+
+        try:
+
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + BUS_BOOKING
+            r = requests.post(db_addr, data = DATA)
+            if r.status_code == 201:
+                db_names.append(db.name)
+                counter += 1
+                db.size += 10
+                db.save()
+
+                if counter == replication_factor:
+                    break
+
+        except:
+            continue
+
+    if counter == replication_factor:
+        new_booking = models.BookingMetaData(id = id, type = 'T', db_name_0 = db_names[0], db_name_1 = db_names[1], db_name_2 = db_names[2], start_date = TravelDate)
+        new_booking.db_name = db_names[0]       # remove later
+        new_booking.save()
+        return 201
+
+    return 201
+
+def get_train_booking_by_id(id):
+
+    metaData = models.BookingMetaData.objects.get(id = id)
+    check_primary(metaData)
+    for i in range(3):
+
+        try:
+
+            db_name = 'db_name_' + str(i)
+            db = models.DatabaseDetails.objects.get(name = getattr(metaData, db_name))
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + GET_BUS_BOOKING_BY_ID + '/' + quote(id)
+            r = requests.get(db_addr)
+            return json.loads(r.text)[0]
+
+        except:
+            continue
+
+def delete_train_booking(id):
+
+    try:
+
+        metaData = models.BookingMetaData.objects.get(id = id)
+        check_primary(metaData)
+
+        primary = models.DatabaseDetails.objects.get(name = metaData.db_name_0)
+        sec1 = models.DatabaseDetails.objects.get(name = metaData.db_name_1)
+        sec2 = models.DatabaseDetails.objects.get(name = metaData.db_name_2)
+
+        db_addr_0 = 'http://' + primary.ip_addr + ':' + primary.port + DELETE_BUS_BOOKING
+        db_addr_1 = 'http://' + sec1.ip_addr + ':' + sec1.port + DELETE_BUS_BOOKING
+        db_addr_2 = 'http://' + sec2.ip_addr + ':' + sec2.port + DELETE_BUS_BOOKING
+
+        db_names = {'db_addr_1': sec1.name, 'db_addr_2': sec2.name}
+
+        DATA = {'id': id}
+        DATA.update({'db_addr_1': db_addr_1, 'db_addr_2': db_addr_2})
+
+        r = requests.post(db_addr_0, data = DATA)
+
+        if r.status_code == 200:
+
+            primary.size -= 10
+            sec1.size -= 10
+            sec2.size -= 10
+            primary.save()
+            sec1.save()
+            sec2.save()
+            metaData.delete()
+            UP = json.loads(r.text)
+            handle_update_status(DATA, UP, 'POST', db_names)
+
+        return r.status_code
+
+    except Exception as e:
+        print(e)
+        return 400
+
+def get_train_booking_by_user(email):
+    dbs = models.DatabaseDetails.objects.exclude(name = 'primary')
+    A = []
+    D = {}
+    for db in dbs:
+        try:
+            db_addr = 'http://' + db.ip_addr + ':' + db.port + GET_BUS_BOOKING_BY_USER + '/' + quote(email)
+            r = requests.get(db_addr)
+            S = json.loads(r.text)
+            for dic in S:
+                if dic.get('id') not in D:
+                    A.append(dic)
+                    D[dic.get('id')] = 1
+        except:
+            continue
+
+    return A
+
+def get_train_booking_by_date(id, date):
 
     dbs = models.DatabaseDetails.objects.exclude(name = 'primary')
     DATA = {'id': id, 'date': date}

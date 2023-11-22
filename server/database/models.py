@@ -31,7 +31,8 @@ class ServiceMetaData(models.Model):
         return list([])
 
     CHOICES = ( ('B', 'Bus'),
-                ('H', 'Hotel'),)
+                ('H', 'Hotel'),
+                ('T', 'Train'),)
     id = models.CharField(primary_key = True, max_length = 64, null = False)
     name = models.CharField(max_length = 100, null = False)
     type = models.CharField(max_length = 1, choices = CHOICES, null = False)
@@ -48,7 +49,8 @@ class ServiceMetaData(models.Model):
 class BookingMetaData(models.Model):
 
     CHOICES = ( ('B', 'Bus'),
-                ('H', 'Hotel'),)
+                ('H', 'Hotel'),
+                ('T', 'Train'),)
     id = models.CharField(primary_key = True, max_length = 64, null = False)
     type = models.CharField(max_length = 1, choices = CHOICES, null = False)
     db_name = models.CharField(max_length = 50, null = False)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, BusService, HotelService, HotelBooking, BusBooking
+from .models import User, BusService, HotelService, HotelBooking, BusBooking, TrainService, TrainBooking
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -40,4 +40,16 @@ class BusBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BusBooking
+        fields = ('id', 'service_id', 'email', 'From', 'To', 'booking_date', 'seats', 'bill', 'TravelDate', )
+        
+class TrainSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TrainService
+        fields = ('id', 'name', 'route', 'timing', 'price', 'train_number', 'is_ready', 'provider', 'seats', 'boarding_point', )
+        
+class TrainBookingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TrainBooking
         fields = ('id', 'service_id', 'email', 'From', 'To', 'booking_date', 'seats', 'bill', 'TravelDate', )

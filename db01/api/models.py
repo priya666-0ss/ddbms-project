@@ -85,3 +85,37 @@ class BusBooking(models.Model):
 
     def __str__(self):
         return self.email
+    
+class TrainService(models.Model):
+
+    def default_array_field():
+        return list([])
+
+    id = models.CharField(primary_key = True, null = False, max_length = 100)
+    name = models.CharField(null = False, max_length = 100)
+    route = ArrayField(models.CharField(max_length = 100, blank = True), default = default_array_field, blank = True)
+    timing = ArrayField(models.CharField(max_length = 20, blank = True), default = default_array_field, blank = True)
+    boarding_point = ArrayField(models.CharField(max_length = 100, blank = True), default = default_array_field, blank = True)
+    price = models.IntegerField(default = 0)
+    train_number = models.CharField(max_length = 20, default = '', blank = True)
+    is_ready = models.BooleanField(default = False)
+    provider = ArrayField(models.CharField(max_length = 100), default = default_array_field)
+    seats = models.IntegerField(default = 0)
+
+    def __str__(self):
+        return self.name
+    
+class TrainBooking(models.Model):
+
+    id = models.CharField(primary_key = True, null = False, max_length = 100)
+    service_id = models.CharField(null = False, max_length = 100)
+    email = models.EmailField(null = False, max_length = 100)
+    From = models.CharField(null = False, max_length = 100, default = "")
+    To = models.CharField(null = False, max_length = 100, default = "")
+    TravelDate = models.DateField(default = timezone.now, null = True)
+    booking_date = models.DateField(default = timezone.now)
+    seats = models.IntegerField(default = 0)
+    bill = models.IntegerField(default = 0)
+
+    def __str__(self):
+        return self.email

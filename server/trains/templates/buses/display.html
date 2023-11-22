@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block service_block %}{% if type != 'S' %}style="visibilty: hidden; display: none;"{% endif %}{% endblock %}
+{% block admin_block %}{% if type != 'A' %}style="visibilty: hidden; display: none;"{% endif %}{% endblock %}
+
+{% block title_block %}Search Trains{% endblock %}
+
+{% block content_block %}
+
+    <div class="container has-text-centered">
+
+        <div class="subtitle is-3">
+            SEARCH RESULTS
+            {% if trains|length > 0 %}
+                ({{ trains|length }})
+            {% endif %}
+        </div>
+
+        <div class="columns">
+            <div class="column">
+                <div>
+                    {% if trains|length > 0 %}
+                        {% for train in trains %}
+                            <form class="box">
+                                <div class="field is-horizontal">
+                                    <div class="field-label is-normal">
+                                        <label class="label">{{ forloop.counter }}.</label>
+                                    </div>
+                                    <div class="field-body">
+                                        <div class="field">
+                                            <div class="subtitle is-5">
+                                                <strong>{{ train.name }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="field">
+                                            <div class="subtitle is-6">
+                                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                                                 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                                                  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<b>INR {{ train.price }}</b>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="field is-horizontal">
+                                    <div class="field-label is-normal">
+                                        <label class="label"></label>
+                                    </div>
+                                    <div class="field-body">
+                                        <div class="field">
+                                            <div class="subtitle is-6">
+                                                <div class="tag is-medium">{{ train.source }}</div> &nbsp; to &nbsp; <div class="tag is-medium">{{ train.destination }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="field">
+                                            <div class="subtitle is-6">
+                                                <b>{{ train.travel_time }} </b> &nbsp; hrs
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="field is-horizontal">
+                                    <div class="field-label is-normal">
+                                        <label class="label"></label>
+                                    </div>
+                                    <div class="field-body">
+                                        <div class="field">
+                                            <a class="button" href="{% url 'trains:Details' id=train.id %}?From={{ request.GET.From|urlencode }}&To={{ request.GET.To|urlencode }}&TravelDate={{ request.GET.TravelDate|urlencode }}">
+
+                                                <div class="subtitle is-6">Book Train</div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        {% endfor %}
+                    {% else %}
+                        <div class="section">
+                            <div class="columns">
+                                <div class="column is-8 is-offset-2">
+                                    <div class="message box">
+                                        <div class="subtitle" style="color: blue;">No Trains Found</div>
+                                        <a class="button is-medium is-primary" href="{% url 'trains:Search' %}">Search Again</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}

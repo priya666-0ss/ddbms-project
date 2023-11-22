@@ -12,5 +12,6 @@ urlpatterns = [
     path('service/<slug:id>', views.EditServiceView.as_view(), name = 'EditService'),
     path('delete_manager_from_service/<slug:id>/<slug:email>', views.DeleteManagerView.as_view(), name = 'DeleteManager'),
     path('delete_bus_route/<slug:id>/<int:index>', views.DeleteRouteView.as_view(), name = 'DeleteBusRoute'),
+    path('delete_train_route/<slug:id>/<int:index>', views.DeleteRouteView.as_view(), name = 'DeleteTrainRoute'),
 
 ]

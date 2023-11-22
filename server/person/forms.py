@@ -52,17 +52,31 @@ class ManagersForm(forms.Form):
 
 class NewServiceForm(forms.Form):
     CHOICES = ( ('B', 'Bus Service'),
-                ('H', 'Hotel Service'),)
+                ('H', 'Hotel Service'),
+                ('T', 'Train Service'),)
     name = forms.CharField(max_length = 100, required = True)
     service_type = forms.ChoiceField(choices = CHOICES, widget = forms.Select)
 
 class EditBusServiceForm(forms.Form):
     CHOICES = ( ('B', 'Bus Service'),
-                ('H', 'Hotel Service'),)
+                ('H', 'Hotel Service'),
+                ('T', 'Train Service'),)
     id = forms.CharField(max_length = 100, required = True, widget = forms.TextInput(attrs={'readonly': True}))
     name = forms.CharField(max_length = 100, required = True)
     service_type = forms.CharField(widget = forms.TextInput(attrs={'readonly': True}))
     bus_number = forms.CharField(max_length = 20, required = True)
+    seats = forms.IntegerField(required = True)
+    price = forms.IntegerField(required = True)
+    is_ready = forms.BooleanField(required = False)
+
+class EditTrainServiceForm(forms.Form):
+    CHOICES = ( ('B', 'Bus Service'),
+                ('H', 'Hotel Service'),
+                ('T', 'Train Service'),)
+    id = forms.CharField(max_length = 100, required = True, widget = forms.TextInput(attrs={'readonly': True}))
+    name = forms.CharField(max_length = 100, required = True)
+    service_type = forms.CharField(widget = forms.TextInput(attrs={'readonly': True}))
+    train_number = forms.CharField(max_length = 20, required = True)
     seats = forms.IntegerField(required = True)
     price = forms.IntegerField(required = True)
     is_ready = forms.BooleanField(required = False)
@@ -76,7 +90,8 @@ class EditRouteForm(forms.Form):
 
 class EditHotelServiceForm(forms.Form):
     CHOICES = ( ('B', 'Bus Service'),
-                ('H', 'Hotel Service'),)
+                ('H', 'Hotel Service'),
+                ('T', 'Train Service'),)
     id = forms.CharField(max_length = 100, required = True, widget = forms.TextInput(attrs={'readonly': True}))
     name = forms.CharField(max_length = 100, required = True)
     service_type = forms.CharField(widget = forms.TextInput(attrs={'readonly': True}))

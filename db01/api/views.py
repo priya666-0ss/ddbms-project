@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import User, BusService, HotelService, HotelBooking, BusBooking
-from .serializers import UserSerializer, BusSerializer, HotelSerializer, HotelBookingSerializer, HotelBookingInfoSerializer, UpdateStatusSerializer, BusBookingSerializer
+from .models import User, BusService, HotelService, HotelBooking, BusBooking, TrainBooking, TrainService
+from .serializers import UserSerializer, BusSerializer, HotelSerializer, HotelBookingSerializer, HotelBookingInfoSerializer, UpdateStatusSerializer, BusBookingSerializer, TrainSerializer, TrainBookingSerializer
 from rest_framework import status
 import requests
 import json
@@ -697,4 +697,297 @@ class BusBookingsByDate(APIView):
     def post(self, request):
         bookings = self.get_object(request.data.get('id'), request.data.get('date'))
         serializer = BusBookingSerializer(bookings, many = True)
+        return Response(serializer.data, status = status.HTTP_200_OK)
+    
+    
+class TrainServiceList(APIView):
+
+    def get(self, request, format = None):
+        services = TrainService.objects.all()
+        serializer = TrainSerializer(services, many = True)
+        return Response(serializer.data)
+
+class TrainServiceListEmail(APIView):
+
+    def post(self, request, format = None):
+        services = TrainService.objects.filter(provider__contains = list([request.data.get('email')]))
+        serializer = TrainSerializer(services, many = True)
+        return Response(serializer.data)
+
+class NewTrainService(APIView):
+
+    def get_object(self, id):
+        return TrainService.objects.filter(id = id)
+
+    def post(self, request, format = None):
+        service = self.get_object(request.data.get('id'))
+        if not service:
+            try:
+                new_service = TrainService(   id = request.data.get('id'),
+                                            name = request.data.get('name'),
+                                            provider = list([request.data.get('provider')]))
+                new_service.full_clean()
+                new_service.save()
+                return Response(status = status.HTTP_201_CREATED)
+            except Exception as e:
+                print('EXCEPTION THROW')
+                print(e)
+                return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class UpdateTrainService(APIView):
+
+    def get_object(self, id):
+        return TrainService.objects.filter(id = id)
+
+    def post(self, request, format = None):
+        service = self.get_object(request.data.get('id'))
+        print('HERE')
+        print(service.count())
+        if not service:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            try:
+                if request.data.get('provider') != None and request.data.get('provider_code') == None:
+                    return Response(status = status.HTTP_400_BAD_REQUEST)
+                if request.data.get('route') != None and request.data.get('route_code') == None:
+                    return Response(status = status.HTTP_400_BAD_REQUEST)
+                if request.data.get('timing') != None and request.data.get('timing_code') == None:
+                    return Response(status = status.HTTP_400_BAD_REQUEST)
+                if request.data.get('boarding_point') != None and request.data.get('boarding_code') == None:
+                    return Response(status = status.HTTP_400_BAD_REQUEST)
+
+                service = service[0]
+                if request.data.get('name') != None:
+                    service.name = request.data.get('name')
+                if request.data.get('price') != None:
+                    service.price = int(request.data.get('price'))
+                if request.data.get('train_number') != None:
+                    service.train_number = request.data.get('train_number')
+                if request.data.get('seats') != None:
+                    service.seats = request.data.get('seats')
+                if request.data.get('is_ready') != None:
+                    service.is_ready = request.data.get('is_ready')
+                if request.data.get('provider') != None and request.data.get('provider_code') == 'ADD':
+                    service.provider.append(request.data.get('provider'))
+                if request.data.get('route') != None and request.data.get('route_code') == 'ADD':
+                    service.route.append(request.data.get('route'))
+                if request.data.get('timing') != None and request.data.get('timing_code') == 'ADD':
+                    service.timing.append(request.data.get('timing'))
+                if request.data.get('boarding_point') != None and request.data.get('boarding_code') == 'ADD':
+                    service.boarding_point.append(request.data.get('boarding_point'))
+                if request.data.get('provider') != None and request.data.get('provider_code') == 'REMOVE':
+                    service.provider.remove(request.data.get('provider'))
+                if request.data.get('route') != None and request.data.get('route_code') == 'REMOVE':
+                    service.route.remove(service.route[int(request.data.get('route'))])
+                if request.data.get('timing') != None and request.data.get('timing_code') == 'REMOVE':
+                    service.timing.remove(service.timing[int(request.data.get('timing'))])
+                if request.data.get('boarding_point') != None and request.data.get('boarding_code') == 'REMOVE':
+                    service.boarding_point.remove(service.boarding_point[int(request.data.get('boarding_point'))])
+                service.full_clean()
+                service.save()
+
+                if request.data.get('db_addr_1') != None:
+                    DATA = {}
+                    UP = {'db_addr_1': False, 'db_addr_2': False}
+                    for item in request.data:
+                        DATA[item] = request.data.get(item)
+                    db_addr_1 = DATA['db_addr_1']
+                    db_addr_2 = DATA['db_addr_2']
+                    del DATA['db_addr_1']
+                    del DATA['db_addr_2']
+
+                    try:
+                        r1 = requests.post(db_addr_1, data = DATA)
+                        if r1.status_code == 200:
+                            UP['db_addr_1'] = True
+                    except:
+                        pass
+
+                    try:
+                        r2 = requests.post(db_addr_2, data = DATA)
+                        if r2.status_code == 200:
+                            UP['db_addr_2'] = True
+                    except:
+                        pass
+
+                    serializer = UpdateStatusSerializer(UP)
+                    return Response(serializer.data, status = status.HTTP_200_OK)
+
+                else:
+                    return Response(status = status.HTTP_200_OK)
+
+            except Exception as e:
+                print(e)
+                return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class GetTrainService(APIView):
+
+    def get_object(self, id):
+        return TrainService.objects.filter(id = id)
+
+    def get(self, request, format = None):
+        service = self.get_object(request.data.get('id'))
+        if not service:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            serializer = TrainSerializer(service, many = True)
+            return Response(serializer.data, status = status.HTTP_200_OK)
+
+class DeleteTrainService(APIView):
+
+    def get_object(self, id):
+        return TrainService.objects.filter(id = id)
+
+    def post(self, request, format = None):
+        service = self.get_object(request.data.get('id'))
+        if not service:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            service = service[0]
+            service.delete()
+
+            if request.data.get('db_addr_1') != None:
+                DATA = {}
+                UP = {'db_addr_1': False, 'db_addr_2': False}
+                for item in request.data:
+                    DATA[item] = request.data.get(item)
+                db_addr_1 = DATA['db_addr_1']
+                db_addr_2 = DATA['db_addr_2']
+                del DATA['db_addr_1']
+                del DATA['db_addr_2']
+
+                try:
+                    r1 = requests.post(db_addr_1, data = DATA)
+                    if r1.status_code == 200:
+                        UP['db_addr_1'] = True
+                except Exception as e:
+                    pass
+
+                try:
+                    r2 = requests.post(db_addr_2, data = DATA)
+                    if r2.status_code == 200:
+                        UP['db_addr_2'] = True
+                except Exception as e:
+                    pass
+
+                serializer = UpdateStatusSerializer(UP)
+                return Response(serializer.data, status = status.HTTP_200_OK)
+
+            else:
+                return Response(status = status.HTTP_200_OK)
+
+class GetTrainByCity(APIView):
+
+    def post(self, request, format = None):
+        services = TrainService.objects.filter(route__contains = [request.data.get('From'), request.data.get('To')], is_ready=True)
+        S = []
+        for service in services:
+            idx1 = service.route.index(request.data.get('From'))
+            idx2 = idx1
+            for i in range(idx1 + 1, len(service.route)):
+                if service.route[i] == request.data.get('To'):
+                    idx2 = i
+                    break
+            if idx2 > idx1:
+                S.append(service)
+        serializer = TrainSerializer(S, many = True)
+        return Response(serializer.data)
+
+class TrainBookingByTrain(APIView):
+
+    def get_object(self, service_id, TravelDate):
+        queryset = TrainBooking.objects.filter(service_id = service_id, TravelDate = TravelDate)
+        return queryset
+
+    def post(self, request, format = None):
+        bookings = self.get_object(service_id = request.data.get('service_id'), TravelDate = request.data.get('TravelDate'))
+        serializer = TrainBookingSerializer(bookings, many = True)
+        return Response(serializer.data, status = status.HTTP_200_OK)
+
+class NewTrainBooking(APIView):
+
+    def post(self, request, format = None):
+        booking = TrainBooking.objects.filter(id = request.data.get('id'))
+        if not booking:
+            try:
+                new_booking = TrainBooking(   id = request.data.get('id'),
+                                            service_id = request.data.get('service_id'),
+                                            email = request.data.get('email'),
+                                            From = request.data.get('From'),
+                                            To = request.data.get('To'),
+                                            TravelDate = request.data.get('TravelDate'),
+                                            booking_date = request.data.get('booking_date'),
+                                            seats = request.data.get('seats'),
+                                            bill = request.data.get('bill'))
+                new_booking.full_clean()
+                new_booking.save()
+
+                return Response(status = status.HTTP_201_CREATED)
+            except Exception as e:
+                print(e)
+                return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class GetTrainBookingById(APIView):
+
+    def get(self, request, id, format = None):
+        bookings = TrainBooking.objects.filter(id = id)
+        serializer = TrainBookingSerializer(bookings, many = True)
+        return Response(serializer.data, status = status.HTTP_200_OK)
+
+class DeleteTrainBooking(APIView):
+
+    def post(self, request, format = None):
+        booking = TrainBooking.objects.get(id = request.data.get('id'))
+        booking.delete()
+
+        if request.data.get('db_addr_1') != None:
+            DATA = {}
+            UP = {'db_addr_1': False, 'db_addr_2': False}
+            for item in request.data:
+                DATA[item] = request.data.get(item)
+            db_addr_1 = DATA['db_addr_1']
+            db_addr_2 = DATA['db_addr_2']
+            del DATA['db_addr_1']
+            del DATA['db_addr_2']
+
+            try:
+                r1 = requests.post(db_addr_1, data = DATA)
+                if r1.status_code == 200:
+                    UP['db_addr_1'] = True
+            except:
+                pass
+
+            try:
+                r2 = requests.post(db_addr_2, data = DATA)
+                if r2.status_code == 200:
+                    UP['db_addr_2'] = True
+            except:
+                pass
+
+            serializer = UpdateStatusSerializer(UP)
+            return Response(serializer.data, status = status.HTTP_200_OK)
+
+        else:
+            return Response(status = status.HTTP_200_OK)
+
+class GetTrainBookingByUser(APIView):
+
+    def get(self, request, email, format = None):
+        bookings = TrainBooking.objects.filter(email = email)
+        serializer = TrainBookingSerializer(bookings, many = True)
+        return Response(serializer.data, status = status.HTTP_200_OK)
+
+class TrainBookingsByDate(APIView):
+
+    def get_object(self, service_id, date):
+        queryset = TrainBooking.objects.filter(service_id = service_id, TravelDate = date)
+        return queryset
+
+    def post(self, request):
+        bookings = self.get_object(request.data.get('id'), request.data.get('date'))
+        serializer = TrainBookingSerializer(bookings, many = True)
         return Response(serializer.data, status = status.HTTP_200_OK)

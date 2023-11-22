@@ -113,6 +113,64 @@
         </div>
     </div>
     {% endif %}
+        {% if services2|length > 0 %}
+    <div class="columns has-text-centered">
+        <div class="column">
+            <div class="box">
+                <h3 class="subtitle is-5">Your Train Services</h3>
+                <div>
+                    <table class="table is-fullwidth">
+                        <thead>
+                            <tr>
+                              <th><abbr title="Number">Sr. No.</abbr></th>
+                              <th>Name</th>
+                              <th>Train Number</th>
+                              <th>Source</th>
+                              <th>Destination</th>
+                              <th>Departure</th>
+                              <th>Arrival</th>
+                              <th>Capacity</th>
+                              <th></th>
+                              <th>Status</th>
+                            </tr>
+                      </thead>
+                      <tbody>
+                          {% for service in services2 %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td><a href="{% url 'person:EditService' id=service.id %}">{{ service.name }}</a></td>
+                                <td>{% if service.train_number != '' %}{{ service.train_number }}{% else %}-{% endif %}</td>
+                                <td>{% if service.route|length > 1 %}{{service.route.0}}{% else %}-{% endif %}</td>
+                                <td>{% if service.route|length > 1 %}{% for route in service.route %}
+                                                                        {% if forloop.last %}{{route}}{% endif %}
+                                                                    {% endfor %}{% else %}-{% endif %}
+                                </td>
+                                <td>{% if service.timing|length > 1 %}{{service.timing.0}}{% else %}-{% endif %}</td>
+                                <td>{% if service.timing|length > 1 %}{% for timing in service.timing %}
+                                                                        {% if forloop.last %}{{timing}}{% endif %}
+                                                                    {% endfor %}{% else %}-{% endif %}</td>
+                                <td>{{ service.seats }}</td>
+                                <td><a href="{% url 'trains:Bookings' id=service.id %}">View Bookings</a></td>
+                                <td>{% if service.is_ready == False %}<span style="color: red;">INACTIVE</span>{% else %}<span style="color: green;">RUNNING</span>{% endif %}</td>
+                            <tr>
+                          {% endfor %}
+                      </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="columns has-text-centered">
+        <div class="column is-4 is-offset-4">
+            <div class="box">
+                <div class="message">
+                    You do not manage any train services
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% if services1|length > 0 %}
     <div class="columns has-text-centered">
         <div class="column">
